@@ -14,8 +14,8 @@
 
 //Constants
 
-#define NT_DEVICE_NAME      L"\\Device\\BasicRW"
-#define DOS_DEVICE_NAME     L"\\DosDevices\\BasicRW"
+#define NT_DEVICE_NAME      L"\\Device\\BasicDrvMutex"
+#define DOS_DEVICE_NAME     L"\\DosDevices\\BasicDrvMutex"
 
 // We are sending down a buff of 255 from the app
 #define MAXDATABUFFER 255

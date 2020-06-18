@@ -70,8 +70,8 @@ int __cdecl main(int argc, char* argv[]) {
     printf("Creating Service named BasicDrv...\n");
 
     hService = CreateService(hSCM, // Handle to SCM database
-        TEXT("BasicDrvRW"),          // Name of service
-        TEXT("Basic Driver ReadWrite"),      // Display name
+        TEXT("BasicDrvMutex"),          // Name of service
+        TEXT("Basic Driver Mutex"),      // Display name
         SERVICE_ALL_ACCESS,        // Desired access
         SERVICE_KERNEL_DRIVER,     // Service type
         SERVICE_DEMAND_START,      // Start type
@@ -100,7 +100,7 @@ int __cdecl main(int argc, char* argv[]) {
     printf("Opening Service...\n");
 
     hService = OpenService(hSCM,    // Handle to SCM database
-        TEXT("BasicDrvRW"),           // Name of service
+        TEXT("BasicDrvMutex"),           // Name of service
         SERVICE_ALL_ACCESS);        // Desired access
 
     if (!hService) {

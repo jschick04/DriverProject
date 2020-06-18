@@ -19,12 +19,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <Inf Include="Phase2-BasicDrvRW.inf">
-      <Filter>Driver Files</Filter>
-    </Inf>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="src\BasicDrvRW.c">
+    <ClCompile Include="src\BasicDrvMutex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
