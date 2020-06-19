@@ -19,7 +19,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\BasicDrvMutex.c">
+    <ClCompile Include="src\BasicDrvMutex.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,88 +1,65 @@
-//=====================================================================
-// UserBasic - User Basic Driver
-//
-// This program writes a message to the Basic Driver.
-//
-//   Last Modified : 4 Feb 2015 ronsto
-//
-//=====================================================================
-
 #include <conio.h>
-#include <stdio.h>
+#include <iostream>
 #include <strsafe.h>
 #include <windows.h>
 
 #define MAXBUFFER 255
 
-//=====================================================================
-// main
-//
-// Main Entry Point
-//=====================================================================
-
 int main(void) {
-    //Local Variables
-
-    HANDLE hFile;
     DWORD dwReturn;
-    HANDLE hMutex = OpenMutex(SYNCHRONIZE, false, L"BASICDRVMUTEX");
 
-    if (!hMutex) {
-        printf("Failed to open mutex");
+    auto* mutex = OpenMutex(SYNCHRONIZE, false, L"BASICDRVMUTEX");
+
+    if (!mutex) {
+        std::cout << "Failed to open mutex: " << GetLastError() << std::endl;
         return 2;
     }
 
-    //Used for the ReadFile and WriteFile operations
-    BOOL fSuccess = FALSE;
+    const auto readString = std::make_unique<std::wstring>();
 
-    char* szReadString = (char*)malloc(MAXBUFFER);
-
-    if (!szReadString) {
-        printf("Failed to malloc");
+    if (!readString) {
+        std::cout << "Failed to allocate memory\n";
         return 2;
     }
 
-    //Open DOS Device Name 
-
-    // @formatter:off
-    hFile = CreateFile(
-        L"\\\\.\\BasicDrvMutex",              // Name of object
-        GENERIC_READ,   // Desired Access
-        0,                              // Share Mode
-        NULL,                           // reserved
-        OPEN_EXISTING,                  // Fail of object does not exist
-        0,                              // Flags
-        NULL                            // reserved
+    // Open DOS Device Name
+    auto* hFile = CreateFile(
+        L"\\\\.\\BasicDrvMutex",    // Name of object
+        GENERIC_READ,               // Desired Access
+        0,                          // Share Mode
+        nullptr,                    // reserved
+        OPEN_EXISTING,              // Fail of object does not exist
+        0,                          // Flags
+        nullptr                     // reserved
     );
-    // @formatter:on
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        printf("CreateFile failed to open handle to BasicRW Device Object");
+        std::cout << "CreateFile failed to open handle to BasicRW Device Object\n";
         return 4;
     }
 
-    int count = 1;
+    auto count = 1;
 
     while (count < 100) {
-        printf("\n Waiting for BASICDRVMUTEX \n");
-
-        Sleep(100);
-        WaitForSingleObject(hMutex, INFINITE);
-        printf("\n Reading string from driver buffer \n");
-
-        ReadFile(hFile, szReadString, MAXBUFFER, &dwReturn, nullptr);
-
-        printf("\n Results from buffer - %s \n", szReadString);
+        std::cout << "\n Waiting for BASICDRVMUTEX \n";
         Sleep(100);
 
-        printf("\n Release mutex \n");
+        WaitForSingleObject(mutex, INFINITE);
+
+        std::cout << "\n Reading string from driver buffer \n";
+
+        ReadFile(hFile, readString.get(), MAXBUFFER, &dwReturn, nullptr);
+
+        std::cout << "\n Results from buffer - " << readString << std::endl;
         Sleep(100);
 
-        ReleaseMutex(hMutex);
+        std::cout << "\n Release mutex \n";
+        Sleep(100);
+
+        ReleaseMutex(mutex);
         count++;
     }
 
-    CloseHandle(hMutex);
+    CloseHandle(mutex);
     CloseHandle(hFile);
-    free(szReadString);
 }
