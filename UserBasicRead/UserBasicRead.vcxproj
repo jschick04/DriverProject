@@ -21,9 +21,10 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{66c17234-6503-432d-9946-8512fd9eee50}</ProjectGuid>
-    <RootNamespace>Phase3UserBasicWriteMutex</RootNamespace>
+    <ProjectGuid>{9406ce09-c8a9-4e49-80ce-65bb5b79b523}</ProjectGuid>
+    <RootNamespace>Phase2UserBasicRW</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>UserBasicRead</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -151,7 +152,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\UserBasicWriteMutex.cpp" />
+    <ClCompile Include="src\UserBasicRead.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

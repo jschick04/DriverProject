@@ -1,11 +1,12 @@
 #include <ntddk.h>
 
-#define NT_DEVICE_NAME      L"\\Device\\BasicDrvMutex"
-#define DOS_DEVICE_NAME     L"\\DosDevices\\BasicDrvMutex"
+#define NT_DEVICE_NAME      L"\\Device\\BasicDrv"
+#define DOS_DEVICE_NAME     L"\\DosDevices\\BasicDrv"
 
 #define MAXDATABUFFER 255
 
 void* g_dataBuffer = nullptr;
+PERESOURCE g_bufferLock = nullptr;
 
 #pragma region Definitions
 
@@ -59,7 +60,15 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
     RtlInitUnicodeString(&usDeviceName, NT_DEVICE_NAME);
     RtlInitUnicodeString(&usDosDeviceName, DOS_DEVICE_NAME);
 
-    auto ntStatus = IoCreateDevice(
+    g_bufferLock = (PERESOURCE)ExAllocatePoolWithTag(NonPagedPool, sizeof(ERESOURCE), '2saB');
+    auto ntStatus = ExInitializeResourceLite(g_bufferLock);
+
+    if (!NT_SUCCESS(ntStatus)) {
+        DbgPrint("Could not create the device object\n");
+        return ntStatus;
+    }
+
+    ntStatus = IoCreateDevice(
         pDriverObject,              // Driver Object
         0,                          // No device extension
         &usDeviceName,              // Device name "\Device\Basic"
@@ -125,6 +134,11 @@ void BasicUnloadDriver(IN PDRIVER_OBJECT pDriverObject) {
     if (g_dataBuffer) {
         ExFreePoolWithTag(g_dataBuffer, (LONG)'ISAB');
     }
+
+    if (g_bufferLock) {
+        ExDeleteResourceLite(g_bufferLock);
+        ExFreePoolWithTag(g_bufferLock, (LONG)'2saB');
+    }
 }
 
 NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
@@ -147,6 +161,9 @@ NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
     if (pIoStackIrp) {
         const auto* pWriteDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
 
+        KeEnterCriticalRegion();
+        ExAcquireResourceExclusiveLite(g_bufferLock, true);
+
         if (pWriteDataBuffer) {
             // Verify That String Is NULL Terminated
             const unsigned int uiLength = pIoStackIrp->Parameters.Write.Length;
@@ -159,6 +176,9 @@ NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
                 RtlCopyMemory(g_dataBuffer, pWriteDataBuffer, uiLength);
             }
         }
+
+        ExReleaseResourceLite(g_bufferLock);
+        KeLeaveCriticalRegion();
     }
 
     pIrp->IoStatus.Status = STATUS_SUCCESS;
@@ -178,6 +198,9 @@ NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
     if (pIoStackIrp) {
         auto* pReadDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
 
+        KeEnterCriticalRegion();
+        ExAcquireResourceSharedLite(g_bufferLock, true);
+
         if (pReadDataBuffer) {
             // Verify That String Is NULL Terminated
             const unsigned int uiLength = pIoStackIrp->Parameters.Read.Length;
@@ -186,6 +209,9 @@ NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
                 RtlCopyMemory(pReadDataBuffer, g_dataBuffer, uiLength);
             }
         }
+
+        ExReleaseResourceLite(g_bufferLock);
+        KeLeaveCriticalRegion();
     }
 
     pIrp->IoStatus.Status = STATUS_SUCCESS;

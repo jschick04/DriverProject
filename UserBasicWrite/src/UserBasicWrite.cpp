@@ -1,5 +1,4 @@
 #include <conio.h>
-#include <cstdio>
 #include <iostream>
 #include <string>
 #include <strsafe.h>
@@ -10,19 +9,12 @@
 int main(void) {
     DWORD dwReturn;
 
-    auto* mutex = CreateMutex(nullptr, FALSE, L"BASICDRVMUTEX");
-
-    if (!mutex) {
-        std::cout << "Failed to create mutex: " << GetLastError() << std::endl;
-        return 2;
-    }
-
     // Initial string to seed the buffer
-    const std::wstring szInitialString = L"BasicDrvMutex Test Write Complete!";
+    const std::string szInitialString = "BasicDrv Test Write Complete!";
 
     //Open DOS Device Name 
     auto* hFile = CreateFile(
-        L"\\\\.\\BasicDrvMutex",        // Name of object
+        L"\\\\.\\BasicDrv",        // Name of object
         GENERIC_READ | GENERIC_WRITE,   // Desired Access
         0,                              // Share Mode
         nullptr,                        // reserved
@@ -32,7 +24,7 @@ int main(void) {
     );
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        printf("CreateFile failed to open handle to BasicRW Device Object");
+        std::cout << "CreateFile failed to open handle to Basic Device Object\n";
         return 4;
     }
 
@@ -53,26 +45,19 @@ int main(void) {
     int count = 1;
 
     while (count < 100) {
-        std::cout << "\n Waiting for BASICDRVMUTEX \n";
-
         Sleep(100);
-        WaitForSingleObject(mutex, INFINITE);
-        std::cout << "\n BASICDRVMUTEX acquired \n";
 
-        auto writeString = L"Driver Buffer Write Number " + std::to_wstring(count);
+        std::string writeString = "Driver Buffer Write Number " + std::to_string(count);
 
-        std::cout << "\n Writing the string to driver - " << writeString.c_str() << std::endl;
+        std::cout << "\n Writing the string to driver - " << writeString << std::endl;
         Sleep(100);
 
         WriteFile(hFile, writeString.c_str(), writeString.size(), &dwReturn, nullptr);
 
-        std::cout << "\n Release mutex \n";
         Sleep(100);
 
-        ReleaseMutex(mutex);
         count++;
     }
 
-    CloseHandle(mutex);
     CloseHandle(hFile);
 }

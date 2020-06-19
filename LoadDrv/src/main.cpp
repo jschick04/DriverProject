@@ -7,8 +7,8 @@
 //
 //=====================================================================
 
-#include <windows.h>
 #include <stdio.h>
+#include <windows.h>
 
 //=====================================================================
 // main
@@ -24,7 +24,6 @@ int __cdecl main(int argc, char* argv[]) {
     SERVICE_STATUS ss;
     int iBufferSize;
     DWORD dwgle;
-
 
     //Process Arguments
 
@@ -69,9 +68,10 @@ int __cdecl main(int argc, char* argv[]) {
 
     printf("Creating Service named BasicDrv...\n");
 
-    hService = CreateService(hSCM, // Handle to SCM database
-        TEXT("BasicDrvMutex"),          // Name of service
-        TEXT("Basic Driver Mutex"),      // Display name
+    hService = CreateService(
+        hSCM, // Handle to SCM database
+        TEXT("BasicDrv"),          // Name of service
+        TEXT("Basic Driver"),      // Display name
         SERVICE_ALL_ACCESS,        // Desired access
         SERVICE_KERNEL_DRIVER,     // Service type
         SERVICE_DEMAND_START,      // Start type
@@ -81,7 +81,8 @@ int __cdecl main(int argc, char* argv[]) {
         NULL,                      // No tag identifier
         NULL,                      // Dependencies
         NULL,                      // LocalSystem account
-        NULL);                     // no password
+        NULL
+    );                     // no password
 
     delete[] wstrServiceBinaryPath;
 
@@ -93,15 +94,15 @@ int __cdecl main(int argc, char* argv[]) {
         return 4;
     }
 
-
-
     //Open the service
 
     printf("Opening Service...\n");
 
-    hService = OpenService(hSCM,    // Handle to SCM database
-        TEXT("BasicDrvMutex"),           // Name of service
-        SERVICE_ALL_ACCESS);        // Desired access
+    hService = OpenService(
+        hSCM,    // Handle to SCM database
+        TEXT("BasicDrv"),           // Name of service
+        SERVICE_ALL_ACCESS
+    );        // Desired access
 
     if (!hService) {
 
@@ -111,15 +112,15 @@ int __cdecl main(int argc, char* argv[]) {
         return 5;
     }
 
-
-
     //Start the service
 
     printf("Starting Service...\n");
 
-    if (!StartService(hService,   // Handle to service
+    if (!StartService(
+        hService,   // Handle to service
         0,                        // Number of arguments
-        NULL))                    // Arguments
+        NULL
+    ))                    // Arguments
     {
         dwgle = GetLastError();
         DeleteService(hService);
@@ -136,11 +137,9 @@ int __cdecl main(int argc, char* argv[]) {
     printf("Press <ENTER> to stop service\r\n");
     getchar();
 
-
     //Stop the service
 
     ControlService(hService, SERVICE_CONTROL_STOP, &ss);
-
 
     //Cleanup
     DeleteService(hService);
