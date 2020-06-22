@@ -1,9 +1,11 @@
 #include <ntddk.h>
 
-#define NT_DEVICE_NAME      L"\\Device\\BasicDrv"
-#define DOS_DEVICE_NAME     L"\\DosDevices\\BasicDrv"
+#include "drvioctl.h"
 
-#define MAXDATABUFFER 255
+constexpr auto NT_DEVICE_NAME = L"\\Device\\BasicDrv";
+constexpr auto DOS_DEVICE_NAME = L"\\DosDevices\\BasicDrv";
+
+constexpr auto MAXDATABUFFER = 255;
 
 void* g_dataBuffer = nullptr;
 PERESOURCE g_bufferLock = nullptr;
@@ -34,6 +36,11 @@ extern "C" {
         IN PIRP pIrp
     );
 
+    NTSTATUS MyDriverDispatchDeviceControl(
+        IN PDEVICE_OBJECT pDeviceObject,
+        IN PIRP pIrp
+    );
+
 }
 
 #pragma endregion
@@ -49,6 +56,7 @@ extern "C" {
 #pragma alloc_text( PAGE, BasicCreateClose)
 #pragma alloc_text( PAGE, BasicWrite)
 #pragma alloc_text( PAGE, BasicRead)
+#pragma alloc_text( PAGE, MyDriverDispatchDeviceControl)
 
 NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*pRegistryPath*/) {
     PDEVICE_OBJECT pDeviceObject = nullptr; // Pointer to our new device object
@@ -60,8 +68,8 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
     RtlInitUnicodeString(&usDeviceName, NT_DEVICE_NAME);
     RtlInitUnicodeString(&usDosDeviceName, DOS_DEVICE_NAME);
 
-    g_bufferLock = (PERESOURCE)ExAllocatePoolWithTag(NonPagedPool, sizeof(ERESOURCE), '2saB');
-    auto ntStatus = ExInitializeResourceLite(g_bufferLock);
+    g_bufferLock = static_cast<PERESOURCE>(ExAllocatePoolWithTag(NonPagedPool, sizeof(ERESOURCE), '2saB'));
+    NTSTATUS ntStatus = ExInitializeResourceLite(g_bufferLock);
 
     if (!NT_SUCCESS(ntStatus)) {
         DbgPrint("Could not create the device object\n");
@@ -88,6 +96,7 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
     pDriverObject->MajorFunction[IRP_MJ_CLOSE] = BasicCreateClose;
     pDriverObject->MajorFunction[IRP_MJ_WRITE] = BasicWrite;
     pDriverObject->MajorFunction[IRP_MJ_READ] = BasicRead;
+    pDriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = MyDriverDispatchDeviceControl;
 
     pDriverObject->DriverUnload = BasicUnloadDriver;
 
@@ -104,7 +113,7 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
     }
 
     if (!g_dataBuffer) {
-        g_dataBuffer = ExAllocatePoolWithTag(PagedPool, MAXDATABUFFER, (LONG)'ISAB');
+        g_dataBuffer = ExAllocatePoolWithTag(PagedPool, MAXDATABUFFER, static_cast<LONG>('ISAB'));
 
         if (!g_dataBuffer) {
             DbgPrint("Failed to allocate pool.");
@@ -114,7 +123,7 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
     return ntStatus;
 }
 
-void BasicUnloadDriver(IN PDRIVER_OBJECT pDriverObject) {
+void BasicUnloadDriver(IN DRIVER_OBJECT* const pDriverObject) {
     UNICODE_STRING usDeviceName;    // Device Name
     UNICODE_STRING usDosDeviceName; // DOS Device Name
 
@@ -125,23 +134,23 @@ void BasicUnloadDriver(IN PDRIVER_OBJECT pDriverObject) {
 
     IoDeleteSymbolicLink(&usDosDeviceName);
 
-    auto* const pDeviceObject = pDriverObject->DeviceObject;
+    DEVICE_OBJECT* const pDeviceObject = pDriverObject->DeviceObject;
 
     if (pDeviceObject != nullptr) {
         IoDeleteDevice(pDeviceObject);
     }
 
     if (g_dataBuffer) {
-        ExFreePoolWithTag(g_dataBuffer, (LONG)'ISAB');
+        ExFreePoolWithTag(g_dataBuffer, static_cast<LONG>('ISAB'));
     }
 
     if (g_bufferLock) {
         ExDeleteResourceLite(g_bufferLock);
-        ExFreePoolWithTag(g_bufferLock, (LONG)'2saB');
+        ExFreePoolWithTag(g_bufferLock, static_cast<LONG>('2saB'));
     }
 }
 
-NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
+NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicCreateClose Called\r\n");
 
     pIrp->IoStatus.Status = STATUS_SUCCESS;
@@ -152,21 +161,21 @@ NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
     return STATUS_SUCCESS;
 }
 
-NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
+NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicWrite Called\r\n");
 
-    const auto* pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
+    IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
 
     // Get Buffer Using MdlAddress Parameter From IRP
     if (pIoStackIrp) {
-        const auto* pWriteDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
+        void* pWriteDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
 
         KeEnterCriticalRegion();
         ExAcquireResourceExclusiveLite(g_bufferLock, true);
 
         if (pWriteDataBuffer) {
             // Verify That String Is NULL Terminated
-            const unsigned int uiLength = pIoStackIrp->Parameters.Write.Length;
+            const ULONG uiLength = pIoStackIrp->Parameters.Write.Length;
 
             if (g_dataBuffer) {
                 // First, clear the buffer from the last write
@@ -189,14 +198,14 @@ NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
     return STATUS_SUCCESS;
 }
 
-NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
+NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicRead Called\r\n");
 
-    const auto* pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
+    IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
 
     // Get Buffer Using MdlAddress Parameter from IRP
     if (pIoStackIrp) {
-        auto* pReadDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
+        void* pReadDataBuffer = MmGetSystemAddressForMdlSafe(pIrp->MdlAddress, NormalPagePriority);
 
         KeEnterCriticalRegion();
         ExAcquireResourceSharedLite(g_bufferLock, true);
@@ -212,6 +221,37 @@ NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN PIRP pIrp) {
 
         ExReleaseResourceLite(g_bufferLock);
         KeLeaveCriticalRegion();
+    }
+
+    pIrp->IoStatus.Status = STATUS_SUCCESS;
+    pIrp->IoStatus.Information = 0;
+
+    IoCompleteRequest(pIrp, IO_NO_INCREMENT);
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS MyDriverDispatchDeviceControl(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
+    DbgPrint("DispatchDeviceControl Called\r\n");
+
+    IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
+
+    const ULONG controlCode = pIoStackIrp->Parameters.DeviceIoControl.IoControlCode;
+
+    switch (controlCode) {
+        case IOCTL_DEVICE_POWER_UP_EVENT :
+            DbgPrint("Device Powering On\n");
+            DbgPrint("..................\n");
+            DbgPrint("Device is powered on and ready!\n");
+            break;
+        case IOCTL_DEVICE_POWER_DOWN_EVENT :
+            DbgPrint("Device Powering Down\n");
+            DbgPrint("....................\n");
+            DbgPrint("Goodbye for now.\n");
+            break;
+        default :
+            DbgPrint("Invalid Control Code");
+            break;
     }
 
     pIrp->IoStatus.Status = STATUS_SUCCESS;

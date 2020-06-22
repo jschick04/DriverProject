@@ -11,6 +11,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UserBasicWrite", "UserBasic
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BasicDrv", "BasicDrv\BasicDrv.vcxproj", "{E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UserBasicSendIOCTL", "UserBasicSendIOCTL\UserBasicSendIOCTL.vcxproj", "{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D} = {E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM = Debug|ARM
@@ -83,6 +88,18 @@ Global
 		{E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D}.Release|x86.ActiveCfg = Release|Win32
 		{E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D}.Release|x86.Build.0 = Release|Win32
 		{E15DB9FB-8725-4B4C-9D6C-743A8D7DB71D}.Release|x86.Deploy.0 = Release|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|ARM.ActiveCfg = Debug|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|x64.ActiveCfg = Debug|x64
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|x64.Build.0 = Debug|x64
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|x86.ActiveCfg = Debug|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Debug|x86.Build.0 = Debug|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|ARM.ActiveCfg = Release|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|ARM64.ActiveCfg = Release|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|x64.ActiveCfg = Release|x64
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|x64.Build.0 = Release|x64
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|x86.ActiveCfg = Release|Win32
+		{7BF9DE3A-15A7-4274-8F40-9CF182DC400E}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

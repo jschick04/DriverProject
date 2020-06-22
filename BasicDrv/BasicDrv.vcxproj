@@ -156,6 +156,9 @@
   <ItemGroup>
     <ClCompile Include="src\BasicDrv.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\drvioctl.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

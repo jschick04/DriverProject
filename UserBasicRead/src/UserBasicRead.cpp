@@ -3,7 +3,7 @@
 #include <strsafe.h>
 #include <windows.h>
 
-#define MAXBUFFER 255
+constexpr auto MAXBUFFER = 255;
 
 int main(void) {
     DWORD dwReturn;
@@ -12,13 +12,13 @@ int main(void) {
 
     // Open DOS Device Name
     auto* hFile = CreateFile(
-        L"\\\\.\\BasicDrv",    // Name of object
-        GENERIC_READ,               // Desired Access
-        0,                          // Share Mode
-        nullptr,                    // reserved
-        OPEN_EXISTING,              // Fail of object does not exist
-        0,                          // Flags
-        nullptr                     // reserved
+        L"\\\\.\\BasicDrv", // Name of object
+        GENERIC_READ,       // Desired Access
+        0,                  // Share Mode
+        nullptr,            // reserved
+        OPEN_EXISTING,      // Fail of object does not exist
+        0,                  // Flags
+        nullptr             // reserved
     );
 
     if (hFile == INVALID_HANDLE_VALUE) {

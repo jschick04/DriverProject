@@ -4,8 +4,6 @@
 #include <strsafe.h>
 #include <windows.h>
 
-#define MAXBUFFER 255
-
 int main(void) {
     DWORD dwReturn;
 
@@ -14,7 +12,7 @@ int main(void) {
 
     //Open DOS Device Name 
     auto* hFile = CreateFile(
-        L"\\\\.\\BasicDrv",        // Name of object
+        L"\\\\.\\BasicDrv",             // Name of object
         GENERIC_READ | GENERIC_WRITE,   // Desired Access
         0,                              // Share Mode
         nullptr,                        // reserved
@@ -42,12 +40,12 @@ int main(void) {
         return 5;
     }
 
-    int count = 1;
+    auto count = 1;
 
     while (count < 100) {
         Sleep(100);
 
-        std::string writeString = "Driver Buffer Write Number " + std::to_string(count);
+        auto writeString = "Driver Buffer Write Number " + std::to_string(count);
 
         std::cout << "\n Writing the string to driver - " << writeString << std::endl;
         Sleep(100);
