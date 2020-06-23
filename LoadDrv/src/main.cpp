@@ -1,52 +1,27 @@
-//=====================================================================
-// LoadDriver - Utility Application to load the Basic Driver
-//
-// This program dynamically loads the Basic driver. 
-//
-//  Last Modified : 7 March 2018 ronsto
-//
-//=====================================================================
-
-#include <stdio.h>
+#include <cstdio>
+#include <iostream>
 #include <windows.h>
 
-//=====================================================================
-// main
-//
-// Main Entry Point
-//=====================================================================
-
 int __cdecl main(int argc, char* argv[]) {
-    //Local Variables
-
-    SC_HANDLE hSCM;
-    SC_HANDLE hService;
     SERVICE_STATUS ss;
-    int iBufferSize;
-    DWORD dwgle;
 
-    //Process Arguments
-
+    // Process Arguments
     if (argc < 2) {
-        printf("LoadDrv requires the path to BasicDrv.sys as a parameter.\n");
-        printf("Example Usage LoadDrv C:\\temp\\BasicDrv.sys\n\n");
+        std::cout << "LoadDrv requires the path to BasicDrv.sys as a parameter.\n";
+        std::cout << "Example Usage LoadDrv C:\\temp\\BasicDrv.sys\n\n";
         return 2;
     }
 
-    printf("Load Driver: %s\n", argv[1]);
+    std::cout << "Load Driver: " << argv[1] << std::endl;
 
-    //Open SCM
+    std::cout << "Opening SCM...\n";
 
-    printf("Opening SCM...\n");
-
-    hSCM = OpenSCManager(NULL, NULL, SC_MANAGER_CREATE_SERVICE);
+    SC_HANDLE hSCM = OpenSCManager(nullptr, nullptr, SC_MANAGER_CREATE_SERVICE);
 
     if (!hSCM) {
+        std::cout << "OpenSCManager encountered the error " << GetLastError() << ". Check winerror.h\n";
 
-        dwgle = GetLastError();
-        printf("OpenSCManager encountered the error %d. Check winerror.h\n", dwgle);
         return 3;
-
     }
 
     //argv[1] contains the binary path in ANSI format. CreateService (param 8) requires
@@ -54,97 +29,78 @@ int __cdecl main(int argc, char* argv[]) {
     //First get the size of the required buffer for the wide string (first call
     //to MultiByteToWideChar)
 
-    iBufferSize = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, NULL, 0);
+    const int iBufferSize = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, nullptr, 0);
 
-    //now we have the size of the buffer to allocate
-
-    wchar_t* wstrServiceBinaryPath = new wchar_t[iBufferSize];
-
-    //next use iBufferSize to specify the size of our string in the second call
+    auto* wstrServiceBinaryPath = new wchar_t[iBufferSize];
 
     MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, wstrServiceBinaryPath, iBufferSize);
 
     //Add our service to SCM database
+    std::cout << "Creating Service named BasicDrv...\n";
 
-    printf("Creating Service named BasicDrv...\n");
-
-    hService = CreateService(
-        hSCM, // Handle to SCM database
-        TEXT("BasicDrv"),          // Name of service
-        TEXT("Basic Driver"),      // Display name
-        SERVICE_ALL_ACCESS,        // Desired access
-        SERVICE_KERNEL_DRIVER,     // Service type
-        SERVICE_DEMAND_START,      // Start type
-        SERVICE_ERROR_NORMAL,      // Error control type
-        wstrServiceBinaryPath,     // Service binary
-        NULL,                      // No load ordering group
-        NULL,                      // No tag identifier
-        NULL,                      // Dependencies
-        NULL,                      // LocalSystem account
-        NULL
-    );                     // no password
+    SC_HANDLE hService = CreateService(
+        hSCM,                   // Handle to SCM database
+        TEXT("BasicDrv"),       // Name of service
+        TEXT("Basic Driver"),   // Display name
+        SERVICE_ALL_ACCESS,     // Desired access
+        SERVICE_KERNEL_DRIVER,  // Service type
+        SERVICE_DEMAND_START,   // Start type
+        SERVICE_ERROR_NORMAL,   // Error control type
+        wstrServiceBinaryPath,  // Service binary
+        nullptr,                // No load ordering group
+        nullptr,                // No tag identifier
+        nullptr,                // Dependencies
+        nullptr,                // LocalSystem account
+        nullptr                 // no password
+    );
 
     delete[] wstrServiceBinaryPath;
 
     if (!hService) {
+        std::cout << "CreateService encountered the error " << GetLastError() << ". Check winerror.h\n";
 
-        dwgle = GetLastError();
         DeleteService(hService);
-        printf("CreateService encountered the error %d. Check winerror.h\n", dwgle);
+
         return 4;
     }
 
-    //Open the service
-
-    printf("Opening Service...\n");
+    std::cout << "Opening Service...\n";
 
     hService = OpenService(
-        hSCM,    // Handle to SCM database
-        TEXT("BasicDrv"),           // Name of service
-        SERVICE_ALL_ACCESS
-    );        // Desired access
+        hSCM,               // Handle to SCM database
+        TEXT("BasicDrv"),   // Name of service
+        SERVICE_ALL_ACCESS  // Desired access
+    );
 
     if (!hService) {
+        std::cout << "OpenService encountered the error " << GetLastError() << ". Check winerror.h\n";
 
-        dwgle = GetLastError();
         DeleteService(hService);
-        printf("OpenService encountered the error %d. Check winerror.h\n", dwgle);
+
         return 5;
     }
 
-    //Start the service
+    std::cout << "Starting Service...\n";
 
-    printf("Starting Service...\n");
+    if (!StartService(hService, 0, nullptr)) {
+        std::cout << "StartService encountered the error " << GetLastError() << ". Check winerror.h\n";
 
-    if (!StartService(
-        hService,   // Handle to service
-        0,                        // Number of arguments
-        NULL
-    ))                    // Arguments
-    {
-        dwgle = GetLastError();
         DeleteService(hService);
         CloseServiceHandle(hSCM);
         CloseServiceHandle(hService);
-        printf("StartService encountered the error %d. Check winerror.h\n", dwgle);
+
         return 6;
     }
 
-    printf("Made it here \n");
+    std::cout << "Made it here \n";
 
-    //Wait For User
-
-    printf("Press <ENTER> to stop service\r\n");
+    std::cout << "Press <ENTER> to stop service\r\n";
     getchar();
 
-    //Stop the service
-
+    // Stop the service
     ControlService(hService, SERVICE_CONTROL_STOP, &ss);
 
-    //Cleanup
     DeleteService(hService);
     CloseServiceHandle(hSCM);
     CloseServiceHandle(hService);
-
-    return 1;
 }
