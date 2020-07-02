@@ -2,6 +2,10 @@
 
 #include "drvioctl.h"
 
+#include "trace.h"
+
+#include "BasicDrv.tmh"
+
 constexpr auto NT_DEVICE_NAME = L"\\Device\\BasicDrv";
 constexpr auto DOS_DEVICE_NAME = L"\\DosDevices\\BasicDrv";
 
@@ -58,12 +62,13 @@ extern "C" {
 #pragma alloc_text( PAGE, BasicRead)
 #pragma alloc_text( PAGE, MyDriverDispatchDeviceControl)
 
-NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*pRegistryPath*/) {
+NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegistryPath) {
     PDEVICE_OBJECT pDeviceObject = nullptr; // Pointer to our new device object
     UNICODE_STRING usDeviceName;            // Device Name
     UNICODE_STRING usDosDeviceName;         // DOS Device Name
 
-    DbgPrint("DriverEntry Called\r\n");
+    //DbgPrint("DriverEntry Called\r\n");
+    WPP_INIT_TRACING(pDriverObject, pRegistryPath);
 
     RtlInitUnicodeString(&usDeviceName, NT_DEVICE_NAME);
     RtlInitUnicodeString(&usDosDeviceName, DOS_DEVICE_NAME);
@@ -73,6 +78,8 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
 
     if (!NT_SUCCESS(ntStatus)) {
         DbgPrint("Could not create the device object\n");
+        WPP_CLEANUP(pDriverObject);
+
         return ntStatus;
     }
 
@@ -88,6 +95,8 @@ NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING /*p
 
     if (!NT_SUCCESS(ntStatus)) {
         DbgPrint("Could not create the device object\n");
+        WPP_CLEANUP(pDriverObject);
+
         return ntStatus;
     }
 
@@ -127,7 +136,8 @@ void BasicUnloadDriver(IN DRIVER_OBJECT* const pDriverObject) {
     UNICODE_STRING usDeviceName;    // Device Name
     UNICODE_STRING usDosDeviceName; // DOS Device Name
 
-    DbgPrint("BasicUnloadDriver Called\r\n");
+    //DbgPrint("BasicUnloadDriver Called\r\n");
+    WPP_CLEANUP(pDriverObject);
 
     RtlInitUnicodeString(&usDeviceName, NT_DEVICE_NAME);
     RtlInitUnicodeString(&usDosDeviceName, DOS_DEVICE_NAME);
@@ -153,6 +163,8 @@ void BasicUnloadDriver(IN DRIVER_OBJECT* const pDriverObject) {
 NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicCreateClose Called\r\n");
 
+    DoTraceMessage(LEVEL_INFO, "\nEntering %!FUNC!");
+
     pIrp->IoStatus.Status = STATUS_SUCCESS;
     pIrp->IoStatus.Information = 0;
 
@@ -163,6 +175,8 @@ NTSTATUS BasicCreateClose(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIr
 
 NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicWrite Called\r\n");
+
+    DoTraceMessage(LEVEL_INFO, "\nEntering %!FUNC!");
 
     IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
 
@@ -201,6 +215,8 @@ NTSTATUS BasicWrite(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
 NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("BasicRead Called\r\n");
 
+    DoTraceMessage(LEVEL_INFO, "\nEntering %!FUNC!");
+
     IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
 
     // Get Buffer Using MdlAddress Parameter from IRP
@@ -233,6 +249,8 @@ NTSTATUS BasicRead(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
 
 NTSTATUS MyDriverDispatchDeviceControl(IN PDEVICE_OBJECT /*pDeviceObject*/, IN IRP* const pIrp) {
     DbgPrint("DispatchDeviceControl Called\r\n");
+
+    DoTraceMessage(LEVEL_INFO, "\nEntering %!FUNC!");
 
     IO_STACK_LOCATION* const pIoStackIrp = IoGetCurrentIrpStackLocation(pIrp);
 

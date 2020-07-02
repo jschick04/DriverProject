@@ -27,5 +27,8 @@
     <ClInclude Include="src\drvioctl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\trace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

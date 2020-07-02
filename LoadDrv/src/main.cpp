@@ -24,18 +24,17 @@ int __cdecl main(int argc, char* argv[]) {
         return 3;
     }
 
-    //argv[1] contains the binary path in ANSI format. CreateService (param 8) requires
-    //this to be converted to a Unicode (wide) string. MultiByteToWideChar is used for this.
-    //First get the size of the required buffer for the wide string (first call
-    //to MultiByteToWideChar)
-
+    // argv[1] contains the binary path in ANSI format. CreateService (param 8) requires
+    // this to be converted to a Unicode (wide) string. MultiByteToWideChar is used for this.
+    // First get the size of the required buffer for the wide string (first call
+    // to MultiByteToWideChar)
     const int iBufferSize = MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, nullptr, 0);
 
     auto* wstrServiceBinaryPath = new wchar_t[iBufferSize];
 
     MultiByteToWideChar(CP_UTF8, 0, argv[1], -1, wstrServiceBinaryPath, iBufferSize);
 
-    //Add our service to SCM database
+    // Add our service to SCM database
     std::cout << "Creating Service named BasicDrv...\n";
 
     SC_HANDLE hService = CreateService(
