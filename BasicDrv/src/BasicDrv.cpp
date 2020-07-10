@@ -14,6 +14,49 @@ constexpr auto MAXDATABUFFER = 255;
 void* g_dataBuffer = nullptr;
 PERESOURCE g_bufferLock = nullptr;
 
+#pragma region CircularArrayDebugging
+
+#define SCI_CIRCULAR_ENTRY_COUNT 10000
+#define SCI_KERNEL_STACK_FRAMES 16
+
+typedef struct StateChangeInfo {
+    PETHREAD thread;
+    PEPROCESS process;
+    long dwTickCount;
+    ULONG IOCTL_Captured;
+    int nFramesKernel;
+    PVOID traceKernel[SCI_KERNEL_STACK_FRAMES];
+} STATECHANGEINFO, *PSTATECHANGEINFO;
+
+STATECHANGEINFO g_sciCircularBuffer[SCI_CIRCULAR_ENTRY_COUNT];
+
+long g_dwSCIIndex = -1;
+
+void CaptureStateChange(ULONG IOCTL_Sent) {
+    LONG currentIndex = 0;
+    PSTATECHANGEINFO pSCI;
+
+    currentIndex = InterlockedIncrement(&g_dwSCIIndex);
+
+    pSCI = &(g_sciCircularBuffer[currentIndex % SCI_CIRCULAR_ENTRY_COUNT]);
+
+    pSCI->thread = PsGetCurrentThread();
+    pSCI->process = PsGetCurrentProcess();
+    pSCI->IOCTL_Captured = IOCTL_Sent;
+
+    pSCI->nFramesKernel = RtlWalkFrameChain(pSCI->traceKernel, SCI_KERNEL_STACK_FRAMES, 0);
+
+    if (pSCI->nFramesKernel < SCI_KERNEL_STACK_FRAMES) {
+        pSCI->nFramesKernel += RtlWalkFrameChain(
+            pSCI->traceKernel + pSCI->nFramesKernel,
+            SCI_KERNEL_STACK_FRAMES - pSCI->nFramesKernel,
+            1
+        );
+    }
+}
+
+#pragma endregion
+
 #pragma region Definitions
 
 extern "C" {
@@ -55,12 +98,12 @@ extern "C" {
 * INIT is for onetime initialization code that can be permanently discarded after the driver is loaded.
 * PAGE code must run at passive and not raise IRQL >= dispatch.*/
 
-#pragma alloc_text( INIT, DriverEntry )
-#pragma alloc_text( PAGE, BasicUnloadDriver)
-#pragma alloc_text( PAGE, BasicCreateClose)
-#pragma alloc_text( PAGE, BasicWrite)
-#pragma alloc_text( PAGE, BasicRead)
-#pragma alloc_text( PAGE, MyDriverDispatchDeviceControl)
+#pragma alloc_text(INIT, DriverEntry )
+#pragma alloc_text(PAGE, BasicUnloadDriver)
+#pragma alloc_text(PAGE, BasicCreateClose)
+#pragma alloc_text(PAGE, BasicWrite)
+#pragma alloc_text(PAGE, BasicRead)
+#pragma alloc_text(PAGE, MyDriverDispatchDeviceControl)
 
 NTSTATUS DriverEntry(IN OUT PDRIVER_OBJECT pDriverObject, IN PUNICODE_STRING pRegistryPath) {
     PDEVICE_OBJECT pDeviceObject = nullptr; // Pointer to our new device object
@@ -261,11 +304,17 @@ NTSTATUS MyDriverDispatchDeviceControl(IN PDEVICE_OBJECT /*pDeviceObject*/, IN I
             DbgPrint("Device Powering On\n");
             DbgPrint("..................\n");
             DbgPrint("Device is powered on and ready!\n");
+
+            CaptureStateChange(IOCTL_DEVICE_POWER_UP_EVENT);
+
             break;
         case IOCTL_DEVICE_POWER_DOWN_EVENT :
             DbgPrint("Device Powering Down\n");
             DbgPrint("....................\n");
             DbgPrint("Goodbye for now.\n");
+
+            CaptureStateChange(IOCTL_DEVICE_POWER_DOWN_EVENT);
+
             break;
         default :
             DbgPrint("Invalid Control Code");
